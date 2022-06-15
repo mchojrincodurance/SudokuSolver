@@ -160,8 +160,59 @@ class SolutionShould extends TestCase
         $this->assertFalse($incompleteSolution->isValid());
     }
 
+    /**
+     * @return void
+     * @test
+     */
     public function recognize_whether_it_matches_a_sudoku()
     {
+        $sudoku = $this->buildSolvableSudoku();
 
+        $matchingSolution = (new Solution())
+            ->setValueForSquare(0, 0, 1)
+            ->setValueForSquare(0, 1, 2)
+            ->setValueForSquare(0, 2, 3)
+            ->setValueForSquare(0, 3, 4)
+
+            ->setValueForSquare(1, 0, 3)
+            ->setValueForSquare(1, 1, 4)
+            ->setValueForSquare(1, 2, 1)
+            ->setValueForSquare(1, 3, 2)
+
+            ->setValueForSquare(2, 0, 2)
+            ->setValueForSquare(2, 1, 3)
+            ->setValueForSquare(2, 2, 4)
+            ->setValueForSquare(2, 3, 1)
+
+            ->setValueForSquare(3, 0, 4)
+            ->setValueForSquare(3, 1, 1)
+            ->setValueForSquare(3, 2, 2)
+            ->setValueForSquare(3, 3, 3)
+        ;
+
+        $unmatchingSolution = (new Solution())
+            ->setValueForSquare(0, 0, 2)
+            ->setValueForSquare(0, 1, 1)
+            ->setValueForSquare(0, 2, 3)
+            ->setValueForSquare(0, 3, 4)
+
+            ->setValueForSquare(1, 0, 3)
+            ->setValueForSquare(1, 1, 4)
+            ->setValueForSquare(1, 2, 1)
+            ->setValueForSquare(1, 3, 2)
+
+            ->setValueForSquare(2, 0, 2)
+            ->setValueForSquare(2, 1, 3)
+            ->setValueForSquare(2, 2, 4)
+            ->setValueForSquare(2, 3, 1)
+
+            ->setValueForSquare(3, 0, 4)
+            ->setValueForSquare(3, 1, 1)
+            ->setValueForSquare(3, 2, 2)
+            ->setValueForSquare(3, 3, 3)
+        ;
+
+        $this->assertTrue($matchingSolution->matches($sudoku));
+        $this->assertFalse($unmatchingSolution->matches($sudoku));
     }
 }
