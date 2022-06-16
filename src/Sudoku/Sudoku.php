@@ -2,11 +2,15 @@
 
 namespace Sudoku;
 
+use Sudoku\Exception\{InvalidValueForSquareException,
+    NotSquareMatrixException,
+    SquareAlreadyFilledException,
+    TooSmallMatrixException};
 use JetBrains\PhpStorm\ArrayShape;
-use Sudoku\Exception\{NotSquareMatrixException, TooSmallMatrixException};
 
 class Sudoku
 {
+    const EMPTY_SQUARE = 0;
     private array $matrix;
 
     /**
@@ -26,7 +30,16 @@ class Sudoku
             throw new TooSmallMatrixException();
 
         }
-        $this->matrix = $matrix;
+
+        foreach ($matrix as $i => $row) {
+            $this->matrix[$i] = [];
+            foreach ($row as $j => $value) {
+                $this->matrix[$i][$j] = 0;
+                if ($value) {
+                    $this->setValueForSquare($i, $j, $value);
+                }
+            }
+        }
     }
 
     private function isSquareMatrix(array $matrix): bool
@@ -64,120 +77,86 @@ class Sudoku
 
     public function getValueForSquare(int $row, int $col): int
     {
+        if (!array_key_exists($row, $this->matrix) || !array_key_exists($col, $this->matrix[$row])) {
+
+            return self::EMPTY_SQUARE;
+        }
+
         return $this->matrix[$row][$col];
     }
 
+    /**
+     * @param int $row
+     * @param int $col
+     * @return bool
+     */
     public function isEmptySquare(int $row, int $col): bool
     {
-        return $this->matrix[$row][$col] === 0;
+        return $this->matrix[$row][$col] === self::EMPTY_SQUARE;
     }
 
     /**
+     * @param int $row
+     * @param int $col
+     * @param int $value
+     * @return $this
+     * @throws SquareAlreadyFilledException
+     */
+    public function setValueForSquare(int $row, int $col, int $value): self
+    {
+        if (!$this->isEmptySquare($row, $col)) {
+
+            throw new SquareAlreadyFilledException();
+        }
+        
+        if (!$this->isValueValidForSquare($row, $col, $value)) {
+            
+            throw new InvalidValueForSquareException();
+        }
+        $this->matrix[$row][$col] = $value;
+
+        return $this;
+    }
+
+    /**
+     * @param int $row
+     * @param int $col
+     * @param int $value
      * @return bool
      */
-    public function isSolvable(): bool
+    public function isValueValidForSquare(int $row, int $col, int $value): bool
     {
-        return !$this->hasRepeatedNumbersPerRow() &&
-            !$this->hasRepeatedNumbersPerColumn() &&
-            !$this->hasRepeatedNumbersPerQuadrant() &&
-            $this->emptySquaresAreFillable();
+        return !$this->isValuePresentInRow($row, $value) &&
+            !$this->isValuePresentInCol($col, $value) &&
+            !$this->isValuePresentInQuadrant($this->getQuadrantForSquare($row, $col), $value)
+            ;
     }
 
-    private function hasRepeatedNumbersPerRow(): bool
+    /**
+     * @param int $row
+     * @param int $value
+     * @return void
+     */
+    public function isValuePresentInRow(int $row, int $value) : bool
     {
-        for ($i = 0; $i < $this->getRowCount(); $i++) {
-            if ($this->hasRepeatedNumbersInRow($i)) {
-
-                return true;
-            }
-        }
-
-        return false;
+        return count(array_filter($this->matrix[$row], fn($element) => $value === $element)) > 0;
     }
 
-
-    private function hasRepeatedNumbersPerColumn(): bool
+    /**
+     * @param int $col
+     * @param int $value
+     * @return bool
+     */
+    public function isValuePresentInCol(int $col, int $value): bool
     {
-        for ($i = 0; $i < $this->getRowCount(); $i++) {
-            if ($this->hasRepeatedNumbersInColumn($i)) {
-
-                return true;
-            }
-        }
-
-        return false;
+        return count(array_filter(array_column($this->matrix, $col), fn($element) => $value === $element)) > 0;
     }
 
-    private function hasRepeatedNumbersPerQuadrant(): bool
+    public function isValuePresentInQuadrant(array $quadrant, int $value) : bool
     {
-        foreach ($this->buildQuadrants() as $quadrant) {
-            if ($this->hasRepeatedNumbersInQuadrant($quadrant)) {
-
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private function hasRepeatedNumbersInRow(int $row): bool
-    {
-        for ($col = 0; $col < $this->getRowCount(); $col++) {
-            if ($this->isEmptySquare($row, $col)) {
-
-                continue;
-            }
-            $value = $this->matrix[$row][$col];
-
-            if (count(array_filter($this->matrix[$row], fn($element) => $element === $value)) > 1) {
-
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private function hasRepeatedNumbersInColumn(int $col): bool
-    {
-        for ($row = 0; $row < $this->getRowCount(); $row++) {
-            if ($this->isEmptySquare($row, $col)) {
-
-                continue;
-            }
-            $value = $this->matrix[$row][$col];
-
-            if (count(array_filter(array_column($this->matrix, $col), fn($element) => $element === $value)) > 1) {
-
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private function buildQuadrants(): array
-    {
-        $quadrantSize = sqrt($this->getRowCount());
-        $quadrantQuantity = $this->getRowCount();
-
-        $quadrants = [];
-        for ($i = 0; $i < $quadrantQuantity / $quadrantSize; $i++) {
-            for ($j = 0; $j < $quadrantQuantity / $quadrantSize; $j++) {
-                $quadrants[] = $this->getQuadrantFor($i, $j);
-            }
-        }
-
-        return $quadrants;
-    }
-
-    private function hasRepeatedNumbersInQuadrant(array $quadrant): bool
-    {
-        for ($i = $quadrant['upperLeft']['row']; $i <= $quadrant['bottomRight']['row']; $i++) {
-            for ($j = $quadrant['upperLeft']['col']; $j <= $quadrant['bottomRight']['col']; $j++) {
-                $value = $this->getValueForSquare($i, $j);
-
-                if (!$this->isEmptySquare($i, $j) && $this->howManyOfValueAreInQuadrant($value, $quadrant) > 1) {
+        for($row = $quadrant['upperLeft']['row']; $row <= $quadrant['bottomRight']['row']; $row++ ) {
+            for ($col = $quadrant['upperLeft']['col']; $col <= $quadrant['bottomRight']['col']; $col++ ) {
+                if ($this->getValueForSquare($row, $col) === $value) {
 
                     return true;
                 }
@@ -187,83 +166,9 @@ class Sudoku
         return false;
     }
 
-    private function howManyOfValueAreInQuadrant(int $value, array $quadrant): int
+    #[ArrayShape(['upperLeft' => "float[]|int[]", 'bottomRight' => "float[]|int[]"])] public function getQuadrantForSquare(int $row, int $col): array
     {
-        $count = 0;
-
-        for ($i = $quadrant['upperLeft']['row']; $i <= $quadrant['bottomRight']['row']; $i++) {
-            for ($j = $quadrant['upperLeft']['col']; $j <= $quadrant['bottomRight']['col']; $j++) {
-                $count += $this->getValueForSquare($i, $j) === $value;
-
-            }
-        }
-
-        return $count;
-    }
-
-    private function emptySquaresAreFillable(): bool
-    {
-        foreach ($this->getEmptySquares() as $emptySquare) {
-            if (!$this->isSquareFillable(...$emptySquare)) {
-
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private function isSquareFillable(int $row, int $col): bool
-    {
-        return !empty($this->getPossibleValuesForSquare($row, $col));
-    }
-
-    private function getPossibleValuesForSquare(int $row, int $col): array
-    {
-        $forbiddenValues = $this->getForbiddenValuesByRow($row);
-        $forbiddenValues = array_merge($forbiddenValues, $this->getForbiddenValuesByColumn($col));
-        $forbiddenValues = array_merge($forbiddenValues, $this->getForbiddenValuesByQuadrant($row, $col));
-
-        return $this->removeForbiddenValues(array_unique($forbiddenValues), $this->buildPossibleValues());
-    }
-
-    private function getEmptySquares(): array
-    {
-        $emptySquares = [];
-
-        for ($i = 0; $i < $this->getRowCount(); $i++) {
-            for ($j = 0; $j < $this->getRowCount(); $j++) {
-                if ($this->isEmptySquare($i, $j)) {
-                    $emptySquares[] = [$i, $j];
-                }
-            }
-        }
-
-        return $emptySquares;
-    }
-
-    private function getForbiddenValuesByRow(int $row): array
-    {
-        return array_filter(array_values($this->matrix[$row]));
-    }
-
-    private function getForbiddenValuesByColumn(int $col): array
-    {
-        return array_filter(array_values(array_column($this->matrix, $col)));
-    }
-
-    private function getForbiddenValuesByQuadrant(int $row, int $col): array
-    {
-        return $this->getValuesInQuadrant($this->getQuadrantFor($row, $col));
-    }
-
-    #[ArrayShape([
-        'upperLeft' => "int[]",
-        'bottomRight' => "int[]"
-    ])]
-    private function getQuadrantFor(int $row, int $col): array
-    {
-        $quadrantSize = sqrt($this->getRowCount());
+        $quadrantSize = (int)sqrt($this->getRowCount());
 
         return [
             'upperLeft' => [
@@ -275,48 +180,5 @@ class Sudoku
                 'col' => (int)floor($col / $quadrantSize) * $quadrantSize + $quadrantSize - 1,
             ]
         ];
-    }
-
-    /**
-     * @param array $quadrant
-     * @return array
-     */
-    public function getValuesInQuadrant(array $quadrant): array
-    {
-        $values = [];
-
-        for ($i = $quadrant['upperLeft']['row']; $i <= $quadrant['bottomRight']['row']; $i++) {
-            for ($j = $quadrant['upperLeft']['col']; $j <= $quadrant['bottomRight']['col']; $j++) {
-                if (!$this->isEmptySquare($i, $j)) {
-                    $values[] = $this->getValueForSquare($i, $j);
-                }
-            }
-        }
-
-        return $values;
-    }
-
-    /**
-     * @param array $forbiddenValues
-     * @param array $possibleValues
-     * @return array
-     */
-    public function removeForbiddenValues(array $forbiddenValues, array $possibleValues): array
-    {
-        foreach ($forbiddenValues as $forbiddenValue) {
-            if (($k = array_search($forbiddenValue, $possibleValues)) !== false) {
-                unset($possibleValues[$k]);
-            }
-        }
-
-        return $possibleValues;
-    }
-
-    /**
-     * @return array
-     */
-    public function buildPossibleValues(): array
-    {
-        return range(1, $this->getRowCount());
     }
 }
