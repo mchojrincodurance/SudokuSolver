@@ -6,7 +6,7 @@ use PHPUnit\Framework\TestCase;
 use Sudoku\Exception\{NotSquareMatrixException, TooSmallMatrixException};
 use Sudoku\Sudoku;
 
-class SudokuTest extends TestCase
+class SudokuShould extends TestCase
 {
     /**
      * @test
@@ -49,5 +49,42 @@ class SudokuTest extends TestCase
         ]);
 
         $this->assertInstanceOf(Sudoku::class, $sudoku);
+    }
+
+    /**
+     * @return void
+     * @test
+     */
+    public function determine_whether_it_is_solvable()
+    {
+        $solvableSudoku = $this->buildSolvableSudoku();
+        $unsolvableSudoku = $this->buildUnsolvableSudoku();
+
+        $this->assertTrue($solvableSudoku->isSolvable());
+        $this->assertFalse($unsolvableSudoku->isSolvable());
+    }
+
+    private function buildSolvableSudoku(): Sudoku
+    {
+        return new Sudoku(
+            [
+                [1, 0, 3, 4],
+                [3, 4, 1, 2],
+                [2, 3, 0, 1],
+                [4, 0, 2, 0],
+            ]
+        );
+    }
+
+    private function buildUnsolvableSudoku(): Sudoku
+    {
+        return new Sudoku(
+            [
+                [1, 0, 4, 3],
+                [3, 4, 1, 2],
+                [2, 3, 0, 1],
+                [4, 0, 3, 0],
+            ]
+        );
     }
 }
