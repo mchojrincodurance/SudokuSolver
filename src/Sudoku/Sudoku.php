@@ -2,6 +2,7 @@
 
 namespace Sudoku;
 
+use JetBrains\PhpStorm\ArrayShape;
 use Sudoku\Exception\{NotSquareMatrixException, TooSmallMatrixException};
 
 class Sudoku
@@ -11,6 +12,7 @@ class Sudoku
     /**
      * @param array $matrix
      * @throws NotSquareMatrixException
+     * @throws TooSmallMatrixException
      */
     public function __construct(array $matrix)
     {
@@ -65,9 +67,9 @@ class Sudoku
         return $this->matrix[$row][$col];
     }
 
-    public function isEmptySquare(int $i, int $j): bool
+    public function isEmptySquare(int $row, int $col): bool
     {
-        return $this->matrix[$i][$j] === 0;
+        return $this->matrix[$row][$col] === 0;
     }
 
     /**
@@ -120,12 +122,12 @@ class Sudoku
 
     private function hasRepeatedNumbersInRow(int $row): bool
     {
-        for ($j = 0; $j < $this->getRowCount(); $j++) {
-            if ($this->isEmptySquare($row, $j)) {
+        for ($col = 0; $col < $this->getRowCount(); $col++) {
+            if ($this->isEmptySquare($row, $col)) {
 
                 continue;
             }
-            $value = $this->matrix[$row][$j];
+            $value = $this->matrix[$row][$col];
 
             if (count(array_filter($this->matrix[$row], fn($element) => $element === $value)) > 1) {
 
@@ -136,16 +138,16 @@ class Sudoku
         return false;
     }
 
-    private function hasRepeatedNumbersInColumn(int $column): bool
+    private function hasRepeatedNumbersInColumn(int $col): bool
     {
-        for ($j = 0; $j < $this->getRowCount(); $j++) {
-            if ($this->isEmptySquare($j, $column)) {
+        for ($row = 0; $row < $this->getRowCount(); $row++) {
+            if ($this->isEmptySquare($row, $col)) {
 
                 continue;
             }
-            $value = $this->matrix[$j][$column];
+            $value = $this->matrix[$row][$col];
 
-            if (count(array_filter(array_column($this->matrix, $column), fn($element) => $element === $value)) > 1) {
+            if (count(array_filter(array_column($this->matrix, $col), fn($element) => $element === $value)) > 1) {
 
                 return true;
             }
@@ -162,10 +164,7 @@ class Sudoku
         $quadrants = [];
         for ($i = 0; $i < $quadrantQuantity / $quadrantSize; $i++) {
             for ($j = 0; $j < $quadrantQuantity / $quadrantSize; $j++) {
-                $quadrants[] = [
-                    'upperLeft' => [ $i * $quadrantSize, $j * $quadrantSize],
-                    'bottomRight' => [ ($i + 1) * $quadrantSize - 1, ($j + 1) * $quadrantSize - 1 ],
-                ];
+                $quadrants[] = $this->getQuadrantFor($i, $j);
             }
         }
 
@@ -174,11 +173,11 @@ class Sudoku
 
     private function hasRepeatedNumbersInQuadrant(array $quadrant): bool
     {
-        for($i = $quadrant['upperLeft'][0]; $i <= $quadrant['bottomRight'][0]; $i++ ) {
-            for($j = $quadrant['upperLeft'][1]; $j <= $quadrant['bottomRight'][1]; $j++) {
+        for ($i = $quadrant['upperLeft']['row']; $i <= $quadrant['bottomRight']['row']; $i++) {
+            for ($j = $quadrant['upperLeft']['col']; $j <= $quadrant['bottomRight']['col']; $j++) {
                 $value = $this->getValueForSquare($i, $j);
 
-                if (!$this->isEmptySquare($i, $j) && $this->howManyOfValueAreInQuadrant($quadrant, $value) > 1) {
+                if (!$this->isEmptySquare($i, $j) && $this->howManyOfValueAreInQuadrant($value, $quadrant) > 1) {
 
                     return true;
                 }
@@ -188,12 +187,12 @@ class Sudoku
         return false;
     }
 
-    private function howManyOfValueAreInQuadrant(array $quadrant, int $value): int
+    private function howManyOfValueAreInQuadrant(int $value, array $quadrant): int
     {
         $count = 0;
 
-        for($i = $quadrant['upperLeft'][0]; $i <= $quadrant['bottomRight'][0]; $i++ ) {
-            for($j = $quadrant['upperLeft'][1]; $j <= $quadrant['bottomRight'][1]; $j++) {
+        for ($i = $quadrant['upperLeft']['row']; $i <= $quadrant['bottomRight']['row']; $i++) {
+            for ($j = $quadrant['upperLeft']['col']; $j <= $quadrant['bottomRight']['col']; $j++) {
                 $count += $this->getValueForSquare($i, $j) === $value;
 
             }
@@ -202,9 +201,9 @@ class Sudoku
         return $count;
     }
 
-    private function emptySquaresAreFillable() : bool
+    private function emptySquaresAreFillable(): bool
     {
-        foreach( $this->getEmptySquares() as $emptySquare ) {
+        foreach ($this->getEmptySquares() as $emptySquare) {
             if (!$this->isSquareFillable(...$emptySquare)) {
 
                 return false;
@@ -216,34 +215,24 @@ class Sudoku
 
     private function isSquareFillable(int $row, int $col): bool
     {
-        return !empty($this->getPossibleValuesFor($row, $col));
+        return !empty($this->getPossibleValuesForSquare($row, $col));
     }
 
-    private function getPossibleValuesFor(int $row, int $col) : array
+    private function getPossibleValuesForSquare(int $row, int $col): array
     {
-        $possibleValues = range( 1, $this->getRowCount() );
-
         $forbiddenValues = $this->getForbiddenValuesByRow($row);
         $forbiddenValues = array_merge($forbiddenValues, $this->getForbiddenValuesByColumn($col));
         $forbiddenValues = array_merge($forbiddenValues, $this->getForbiddenValuesByQuadrant($row, $col));
 
-        $forbiddenValues = array_unique($forbiddenValues);
-
-        foreach($forbiddenValues as $forbiddenValue) {
-            if (($k = array_search($forbiddenValue, $possibleValues)) !== false) {
-                unset($possibleValues[$k]);
-            }
-        }
-
-        return $possibleValues;
+        return $this->removeForbiddenValues(array_unique($forbiddenValues), $this->buildPossibleValues());
     }
 
-    private function getEmptySquares() : array
+    private function getEmptySquares(): array
     {
         $emptySquares = [];
 
-        for( $i = 0; $i < $this->getRowCount(); $i++ ) {
-            for($j = 0; $j < $this->getRowCount(); $j++ ) {
+        for ($i = 0; $i < $this->getRowCount(); $i++) {
+            for ($j = 0; $j < $this->getRowCount(); $j++) {
                 if ($this->isEmptySquare($i, $j)) {
                     $emptySquares[] = [$i, $j];
                 }
@@ -253,21 +242,48 @@ class Sudoku
         return $emptySquares;
     }
 
-    private function getForbiddenValuesByRow(int $row) : array
+    private function getForbiddenValuesByRow(int $row): array
     {
         return array_filter(array_values($this->matrix[$row]));
     }
 
-    private function getForbiddenValuesByColumn(int $col) : array
+    private function getForbiddenValuesByColumn(int $col): array
     {
         return array_filter(array_values(array_column($this->matrix, $col)));
     }
 
-    private function getForbiddenValuesByQuadrant(int $row, int $col) : array
+    private function getForbiddenValuesByQuadrant(int $row, int $col): array
+    {
+        return $this->getValuesInQuadrant($this->getQuadrantFor($row, $col));
+    }
+
+    #[ArrayShape([
+        'upperLeft' => "int[]",
+        'bottomRight' => "int[]"
+    ])]
+    private function getQuadrantFor(int $row, int $col): array
+    {
+        $quadrantSize = sqrt($this->getRowCount());
+
+        return [
+            'upperLeft' => [
+                'row' => (int)floor($row / $quadrantSize) * $quadrantSize,
+                'col' => (int)floor($col / $quadrantSize) * $quadrantSize,
+            ],
+            'bottomRight' => [
+                'row' => (int)floor($row / $quadrantSize) * $quadrantSize + $quadrantSize - 1,
+                'col' => (int)floor($col / $quadrantSize) * $quadrantSize + $quadrantSize - 1,
+            ]
+        ];
+    }
+
+    /**
+     * @param array $quadrant
+     * @return array
+     */
+    public function getValuesInQuadrant(array $quadrant): array
     {
         $values = [];
-
-        $quadrant = $this->getQuadrantFor($row, $col);
 
         for ($i = $quadrant['upperLeft']['row']; $i <= $quadrant['bottomRight']['row']; $i++) {
             for ($j = $quadrant['upperLeft']['col']; $j <= $quadrant['bottomRight']['col']; $j++) {
@@ -280,19 +296,27 @@ class Sudoku
         return $values;
     }
 
-    private function getQuadrantFor(int $row, int $col): array
+    /**
+     * @param array $forbiddenValues
+     * @param array $possibleValues
+     * @return array
+     */
+    public function removeForbiddenValues(array $forbiddenValues, array $possibleValues): array
     {
-        $quadrantSize = sqrt($this->getRowCount());
+        foreach ($forbiddenValues as $forbiddenValue) {
+            if (($k = array_search($forbiddenValue, $possibleValues)) !== false) {
+                unset($possibleValues[$k]);
+            }
+        }
 
-        return [
-            'upperLeft' => [
-                'row' => floor($row / $quadrantSize) * $quadrantSize,
-                'col' => floor($col / $quadrantSize) * $quadrantSize,
-            ],
-            'bottomRight' => [
-                'row' => floor($row / $quadrantSize)  * $quadrantSize + $quadrantSize - 1,
-                'col' => floor($col / $quadrantSize)  * $quadrantSize + $quadrantSize - 1,
-            ]
-        ];
+        return $possibleValues;
+    }
+
+    /**
+     * @return array
+     */
+    public function buildPossibleValues(): array
+    {
+        return range(1, $this->getRowCount());
     }
 }
