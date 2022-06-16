@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SudokuTest;
 
 use Sudoku\Solution;
@@ -8,6 +10,8 @@ use Sudoku\Sudoku;
 
 class SolutionShould extends TestCase
 {
+    const ROWS = 4;
+
     /**
      * @test
      */
@@ -21,6 +25,47 @@ class SolutionShould extends TestCase
 
         $invalidSolution = $this->buildWrongSolutionFor($sudoku);
         $this->assertFalse($invalidSolution->isSolutionFor($sudoku));
+    }
+
+    /**
+     * @test
+     * @return void
+     */
+    public function recognize_whether_it_is_valid(): void
+    {
+        $validSolution = $this->buildValidSolution();
+        $invalidSolution = $this->buildInvalidSolution();
+
+        $this->assertTrue($validSolution->isValid());
+        $this->assertFalse($invalidSolution->isValid());
+    }
+
+    /**
+     * @return void
+     * @test
+     */
+    public function recognize_whether_it_is_incomplete(): void
+    {
+        $incompleteSolution = $this->buildIncompleteSolution();
+        $this->assertFalse($incompleteSolution->isComplete());
+
+        $completeSolution = $this->buildCompleteSolution();
+        $this->assertTrue($completeSolution->isComplete());
+    }
+
+    /**
+     * @return void
+     * @test
+     */
+    public function recognize_whether_it_matches_a_sudoku(): void
+    {
+        $sudoku = $this->buildSolvableSudoku();
+
+        $matchingSolution = $this->buildMatchingSolution($sudoku);
+        $unmatchingSolution = $this->buildUnMatchingSolution($sudoku);
+
+        $this->assertTrue($matchingSolution->matches($sudoku));
+        $this->assertFalse($unmatchingSolution->matches($sudoku));
     }
 
     private function buildSolvableSudoku(): Sudoku
@@ -83,136 +128,86 @@ class SolutionShould extends TestCase
         }
     }
 
-    /**
-     * @test
-     */
-
-    public function recognize_whether_it_is_valid()
+    private function buildMatchingSolution(Sudoku $sudoku): Solution
     {
-        $validSolution = (new Solution())
-            ->setValueForSquare(0, 0, 1)
-            ->setValueForSquare(0, 1, 2)
-            ->setValueForSquare(0, 2, 3)
-            ->setValueForSquare(0, 3, 4)
+        $solution = new Solution();
 
-            ->setValueForSquare(1, 0, 3)
-            ->setValueForSquare(1, 1, 4)
-            ->setValueForSquare(1, 2, 1)
-            ->setValueForSquare(1, 3, 2)
+        for ($row = 0; $row < $sudoku->getRowCount(); $row++ ) {
+            for ($col = 0; $col < $sudoku->getRowCount(); $col++ ) {
+                $solution->setValueForSquare( $row, $col, $sudoku->getValueForSquare($row, $col) );
+            }
+        }
 
-            ->setValueForSquare(2, 0, 2)
-            ->setValueForSquare(2, 1, 3)
-            ->setValueForSquare(2, 2, 4)
-            ->setValueForSquare(2, 3, 1)
-
-            ->setValueForSquare(3, 0, 4)
-            ->setValueForSquare(3, 1, 1)
-            ->setValueForSquare(3, 2, 2)
-            ->setValueForSquare(3, 3, 3)
-            ;
-
-        $invalidSolution = (new Solution())
-            ->setValueForSquare(0, 0, 1)
-            ->setValueForSquare(0, 1, 1)
-            ->setValueForSquare(0, 2, 3)
-            ->setValueForSquare(0, 3, 4)
-
-            ->setValueForSquare(1, 0, 3)
-            ->setValueForSquare(1, 1, 4)
-            ->setValueForSquare(1, 2, 1)
-            ->setValueForSquare(1, 3, 2)
-
-            ->setValueForSquare(2, 0, 2)
-            ->setValueForSquare(2, 1, 3)
-            ->setValueForSquare(2, 2, 4)
-            ->setValueForSquare(2, 3, 1)
-
-            ->setValueForSquare(3, 0, 4)
-            ->setValueForSquare(3, 1, 1)
-            ->setValueForSquare(3, 2, 2)
-            ->setValueForSquare(3, 3, 3)
-        ;
-
-        $incompleteSolution = (new Solution())
-            ->setValueForSquare(0, 0, 1)
-            ->setValueForSquare(0, 1, 0)
-            ->setValueForSquare(0, 2, 3)
-            ->setValueForSquare(0, 3, 4)
-
-            ->setValueForSquare(1, 0, 3)
-            ->setValueForSquare(1, 1, 4)
-            ->setValueForSquare(1, 2, 1)
-            ->setValueForSquare(1, 3, 0)
-
-            ->setValueForSquare(2, 0, 2)
-            ->setValueForSquare(2, 1, 3)
-            ->setValueForSquare(2, 2, 4)
-            ->setValueForSquare(2, 3, 1)
-
-            ->setValueForSquare(3, 0, 4)
-            ->setValueForSquare(3, 1, 1)
-            ->setValueForSquare(3, 2, 2)
-            ->setValueForSquare(3, 3, 3)
-        ;
-
-        $this->assertTrue($validSolution->isValid());
-        $this->assertFalse($invalidSolution->isValid());
-        $this->assertFalse($incompleteSolution->isValid());
+        return $solution;
     }
 
-    /**
-     * @return void
-     * @test
-     */
-    public function recognize_whether_it_matches_a_sudoku()
+    private function buildUnMatchingSolution(Sudoku $sudoku)
     {
-        $sudoku = $this->buildSolvableSudoku();
+        $solution = new Solution();
 
-        $matchingSolution = (new Solution())
-            ->setValueForSquare(0, 0, 1)
-            ->setValueForSquare(0, 1, 2)
-            ->setValueForSquare(0, 2, 3)
-            ->setValueForSquare(0, 3, 4)
+        for ($row = 0; $row < $sudoku->getRowCount(); $row++ ) {
+            for ($col = 0; $col < $sudoku->getRowCount(); $col++ ) {
+                if (!$sudoku->isEmptySquare($row, $col)) {
+                    $solution->setValueForSquare( $row, $col, $this->getComplementOf($sudoku->getValueForSquare($row, $col), $sudoku));
+                }
+            }
+        }
 
-            ->setValueForSquare(1, 0, 3)
-            ->setValueForSquare(1, 1, 4)
-            ->setValueForSquare(1, 2, 1)
-            ->setValueForSquare(1, 3, 2)
+        return $solution;
+    }
 
-            ->setValueForSquare(2, 0, 2)
-            ->setValueForSquare(2, 1, 3)
-            ->setValueForSquare(2, 2, 4)
-            ->setValueForSquare(2, 3, 1)
+    private function getComplementOf(int $value, Sudoku $sudoku): int
+    {
+        return $sudoku->getRowCount() - $value + 1;
+    }
 
-            ->setValueForSquare(3, 0, 4)
-            ->setValueForSquare(3, 1, 1)
-            ->setValueForSquare(3, 2, 2)
-            ->setValueForSquare(3, 3, 3)
-        ;
+    private function buildIncompleteSolution(): Solution
+    {
+        $solution = new Solution();
 
-        $unmatchingSolution = (new Solution())
-            ->setValueForSquare(0, 0, 2)
-            ->setValueForSquare(0, 1, 1)
-            ->setValueForSquare(0, 2, 3)
-            ->setValueForSquare(0, 3, 4)
+        for ($row = 0; $row < self::ROWS; $row++ ) {
+            for ($col = 0; $col < self::ROWS; $col++ ) {
+                $solution->setValueForSquare($row, $col, 0);
+            }
+        }
 
-            ->setValueForSquare(1, 0, 3)
-            ->setValueForSquare(1, 1, 4)
-            ->setValueForSquare(1, 2, 1)
-            ->setValueForSquare(1, 3, 2)
+        return $solution;
+    }
 
-            ->setValueForSquare(2, 0, 2)
-            ->setValueForSquare(2, 1, 3)
-            ->setValueForSquare(2, 2, 4)
-            ->setValueForSquare(2, 3, 1)
+    private function buildCompleteSolution(): Solution
+    {
+        $solution = new Solution();
 
-            ->setValueForSquare(3, 0, 4)
-            ->setValueForSquare(3, 1, 1)
-            ->setValueForSquare(3, 2, 2)
-            ->setValueForSquare(3, 3, 3)
-        ;
+        for ($row = 0; $row < self::ROWS; $row++ ) {
+            for ($col = 0; $col < self::ROWS; $col++ ) {
+                $solution->setValueForSquare($row, $col, 1);
+            }
+        }
 
-        $this->assertTrue($matchingSolution->matches($sudoku));
-        $this->assertFalse($unmatchingSolution->matches($sudoku));
+        return $solution;
+    }
+
+    private function buildValidSolution(): Solution
+    {
+        return new Solution(
+            [
+                [ 1, 2, 3, 4 ],
+                [ 3, 4, 1, 2 ],
+                [ 2, 3, 4, 1 ],
+                [ 4, 1, 2, 3 ],
+            ]
+        );
+    }
+
+    private function buildInvalidSolution(): Solution
+    {
+        return new Solution(
+            [
+                [ 1, 4, 3, 4 ],
+                [ 3, 2, 1, 2 ],
+                [ 2, 3, 4, 1 ],
+                [ 4, 1, 2, 3 ],
+            ]
+        );
     }
 }
