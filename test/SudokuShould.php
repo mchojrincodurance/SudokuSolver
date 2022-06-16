@@ -89,6 +89,16 @@ class SudokuShould extends TestCase
     }
 
     /**
+     * @test
+     */
+
+    public function know_when_it_is_solved()
+    {
+        $solvedSudoku = new Sudoku($this->buildSolvedSudokuMatrix());
+        $this->assertTrue($solvedSudoku->isSolved());
+    }
+
+    /**
      * @return array
      */
     private function buildCorrectMatrix(): array
@@ -126,6 +136,16 @@ class SudokuShould extends TestCase
             [1, 2, 3],
             [4, 5, 6],
             [1, 2, 3],
+        ];
+    }
+
+    private function buildSolvedSudokuMatrix()
+    {
+        return [
+            [ 1, 2, 3, 4],
+            [ 3, 4, 2, 1],
+            [ 2, 1, 4, 3],
+            [ 4, 3, 1, 2],
         ];
     }
 }

@@ -181,4 +181,28 @@ class Sudoku
             ]
         ];
     }
+
+    /**
+     * @return bool
+     */
+    public function isSolved(): bool
+    {
+        return $this->getEmptySquareCount() === 0;
+    }
+
+    /**
+     * @return int
+     */
+    private function getEmptySquareCount(): int
+    {
+        $emptySquareCount = 0;
+
+        for( $row = 0; $row < $this->getRowCount(); $row++ ) {
+            for ($col = 0; $col < $this->getRowCount(); $col++ ) {
+                $emptySquareCount += $this->isEmptySquare($row, $col);
+            }
+        }
+
+        return $emptySquareCount;
+    }
 }
