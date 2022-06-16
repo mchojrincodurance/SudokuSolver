@@ -22,12 +22,12 @@ class Sudoku
     {
         if (!$this->isSquareMatrix($matrix)) {
 
-            throw new NotSquareMatrixException();
+            throw new NotSquareMatrixException("The matrix is not square");
         }
 
         if (!$this->isBiggerThan4x4($matrix)) {
 
-            throw new TooSmallMatrixException();
+            throw new TooSmallMatrixException("The matrix is only ".count($matrix)."x".count($matrix));
 
         }
 
@@ -63,10 +63,6 @@ class Sudoku
             return false;
         }
 
-        if (count($matrix[0]) < 4) {
-
-            return false;
-        }
         return true;
     }
 
@@ -111,7 +107,7 @@ class Sudoku
         
         if (!$this->isValueValidForSquare($row, $col, $value)) {
             
-            throw new InvalidValueForSquareException();
+            throw new InvalidValueForSquareException("[$row, $col] can't contain $value");
         }
         $this->matrix[$row][$col] = $value;
 
