@@ -4,16 +4,17 @@ require __DIR__.'/vendor/autoload.php';
 
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\SingleCommandApplication;
+use Symfony\Component\Console\{SingleCommandApplication,Style\SymfonyStyle};
+use Sudoku\{Sudoku,Solver};
+use Sudoku\Exception\{InvalidValueForSquareException, TooSmallMatrixException, NotSquareMatrixException};
 
 (new SingleCommandApplication())
     ->setName('SolveSudokuCommand')
     ->setVersion('1.0.0')
     ->addArgument('input-file', InputArgument::REQUIRED, 'The path to the file containing the Sudoku matrix definition')
     ->setCode(function (InputInterface $input, OutputInterface $output) {
-        $io = new \Symfony\Component\Console\Style\SymfonyStyle($input, $output);
+        $io = new SymfonyStyle($input, $output);
 
         $inputFileName = $input->getArgument('input-file');
         $output->writeln('Reading from '. $inputFileName);
@@ -36,12 +37,12 @@ use Symfony\Component\Console\SingleCommandApplication;
             $table->addRow(str_getcsv(str_replace('0', '*', $line)));
         }
         try {
-            $sudoku = new Sudoku\Sudoku($dataMatrix);
+            $sudoku = new Sudoku($dataMatrix);
             $io->section('Initial status:');
             $table->render();
 
             $io->section("Solution:");
-            $solver = new \Sudoku\Solver();
+            $solver = new Solver();
             if ($solution = $solver->getSolutionFor($sudoku)) {
                 $solutionTable = $io->createTable();
                 for ($row = 0; $row < $solution->getRowCount(); $row++ ) {
@@ -56,11 +57,11 @@ use Symfony\Component\Console\SingleCommandApplication;
             } else {
                 $io->info("This Sudoku is not solvable... try another one?");
             }
-        } catch (\Sudoku\Exception\InvalidValueForSquareException $exception) {
+        } catch (InvalidValueForSquareException $exception) {
             $io->error("Input is wrong: ".$exception->getMessage());
-        } catch (\Sudoku\Exception\TooSmallMatrixException $exception) {
+        } catch (TooSmallMatrixException $exception) {
             $io->error("Input is wrong: ".$exception->getMessage());
-        } catch (\Sudoku\Exception\NotSquareMatrixException $exception) {
+        } catch (NotSquareMatrixException $exception) {
             $io->error("Input is wrong: ".$exception->getMessage());
         }
     })
