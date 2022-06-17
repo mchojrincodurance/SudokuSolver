@@ -14,7 +14,6 @@ class Sudoku
     const EMPTY_SQUARE = 0;
     private array $matrix;
 
-
     /**
      * @param array $matrix
      * @throws NotSquareMatrixException
@@ -100,77 +99,8 @@ class Sudoku
         return $this;
     }
 
-    /**
-     * @param int $row
-     * @param int $col
-     * @param int $value
-     * @return bool
-     */
-    public function isValueValidForSquare(int $row, int $col, int $value): bool
-    {
-        return !$this->isValuePresentInRow($row, $value) &&
-            !$this->isValuePresentInCol($col, $value) &&
-            !$this->isValuePresentInQuadrant($this->getQuadrantForSquare($row, $col), $value);
-    }
-
-    /**
-     * @param int $row
-     * @param int $value
-     * @return bool
-     */
-    public function isValuePresentInRow(int $row, int $value): bool
-    {
-        return count(array_filter($this->matrix[$row], fn($element) => $value === $element)) > 0;
-    }
-
-    /**
-     * @param int $col
-     * @param int $value
-     * @return bool
-     */
-    public function isValuePresentInCol(int $col, int $value): bool
-    {
-        return count(array_filter(array_column($this->matrix, $col), fn($element) => $value === $element)) > 0;
-    }
-
-    /**
-     * @param array $quadrant
-     * @param int $value
-     * @return bool
-     */
-    public function isValuePresentInQuadrant(array $quadrant, int $value): bool
-    {
-        for ($row = $quadrant['upperLeft']['row']; $row <= $quadrant['bottomRight']['row']; $row++) {
-            for ($col = $quadrant['upperLeft']['col']; $col <= $quadrant['bottomRight']['col']; $col++) {
-                if ($this->getValueForSquare($row, $col) === $value) {
-
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * @param array $matrix
-     * @return void
-     * @throws SquareAlreadyFilledException
-     */
-    public function initMatrix(array $matrix): void
-    {
-        foreach ($matrix as $i => $row) {
-            $this->matrix[$i] = [];
-            foreach ($row as $j => $value) {
-                $this->matrix[$i][$j] = self::EMPTY_SQUARE;
-                if ($value !== self::EMPTY_SQUARE) {
-                    $this->setValueForSquare($i, $j, $value);
-                }
-            }
-        }
-    }
-
-    #[ArrayShape(['upperLeft' => "float[]|int[]", 'bottomRight' => "float[]|int[]"])] public function getQuadrantForSquare(int $row, int $col): array
+    #[ArrayShape(['upperLeft' => "float[]|int[]", 'bottomRight' => "float[]|int[]"])]
+    public function getQuadrantForSquare(int $row, int $col): array
     {
         $quadrantSize = (int)sqrt($this->getRowCount());
 
@@ -186,6 +116,81 @@ class Sudoku
         ];
     }
 
+    /**
+     * @param int $row
+     * @param int $col
+     * @param int $value
+     * @return bool
+     */
+    private function isValueValidForSquare(int $row, int $col, int $value): bool
+    {
+        return !$this->isValuePresentInRow($row, $value) &&
+            !$this->isValuePresentInCol($col, $value) &&
+            !$this->isValuePresentInQuadrant($this->getQuadrantForSquare($row, $col), $value);
+    }
+
+    /**
+     * @param int $row
+     * @param int $value
+     * @return bool
+     */
+    private function isValuePresentInRow(int $row, int $value): bool
+    {
+        return count(array_filter($this->matrix[$row], fn($element) => $value === $element)) > 0;
+    }
+
+    /**
+     * @param int $col
+     * @param int $value
+     * @return bool
+     */
+    private function isValuePresentInCol(int $col, int $value): bool
+    {
+        return count(array_filter(array_column($this->matrix, $col), fn($element) => $value === $element)) > 0;
+    }
+
+    /**
+     * @param array $quadrant
+     * @param int $value
+     * @return bool
+     */
+    private function isValuePresentInQuadrant(array $quadrant, int $value): bool
+    {
+        for ($row = $quadrant['upperLeft']['row']; $row <= $quadrant['bottomRight']['row']; $row++) {
+            for ($col = $quadrant['upperLeft']['col']; $col <= $quadrant['bottomRight']['col']; $col++) {
+                if ($this->getValueForSquare($row, $col) === $value) {
+
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+
+    /**
+     * @param array $matrix
+     * @return void
+     * @throws SquareAlreadyFilledException
+     */
+    private function initMatrix(array $matrix): void
+    {
+        foreach ($matrix as $i => $row) {
+            $this->matrix[$i] = [];
+            foreach ($row as $j => $value) {
+                $this->matrix[$i][$j] = self::EMPTY_SQUARE;
+                if ($value !== self::EMPTY_SQUARE) {
+                    $this->setValueForSquare($i, $j, $value);
+                }
+            }
+        }
+    }
+
+    /**
+     * @param array $matrix
+     * @return bool
+     */
     private function isSquareMatrix(array $matrix): bool
     {
         $rows = count($matrix);
