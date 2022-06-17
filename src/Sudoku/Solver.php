@@ -9,6 +9,96 @@ class Solver
     private Sudoku $solution;
 
     /**
+     * @param Sudoku $sudoku
+     * @return Sudoku|null
+     */
+    public function getSolutionFor(Sudoku $sudoku): ?Sudoku
+    {
+        $this->solution = clone $sudoku;
+
+        if (!$this->canSolutionBeBuilt()) {
+
+            return null;
+        }
+
+        return $this->buildSolution();
+    }
+
+    /**
+     * @return bool
+     */
+    private function canSolutionBeBuilt(): bool
+    {
+        return $this->areEmptySquaresFillable();
+    }
+
+    /**
+     * @return array
+     */
+    private function buildPossibleValues(): array
+    {
+        return range(1, $this->solution->getRowCount());
+    }
+
+    /**
+     * @return Sudoku
+     */
+    private function buildSolution(): Sudoku
+    {
+        while (!$this->solution->isSolved()) {
+            $this->fillASquare();
+        }
+
+        return $this->solution;
+    }
+
+    /**
+     * @param Sudoku $sudoku
+     * @return bool
+     */
+    private function areEmptySquaresFillable(): bool
+    {
+        foreach ($this->getEmptySquares() as $emptySquare) {
+            if (!$this->isSquareFillable(...$emptySquare)) {
+
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @param int $row
+     * @return array
+     */
+    private function getValuesInRow(int $row): array
+    {
+        $values = [];
+
+        for ($col = 0; $col < $this->solution->getRowCount(); $col++) {
+            $values[] = $this->solution->getValueForSquare($row, $col);
+        }
+
+        return $values;
+    }
+
+    /**
+     * @param int $col
+     * @return array
+     */
+    private function getValuesInColumn(int $col): array
+    {
+        $values = [];
+
+        for ($row = 0; $row < $this->solution->getRowCount(); $row++) {
+            $values[] = $this->solution->getValueForSquare($row, $col);
+        }
+
+        return $values;
+    }
+
+    /**
      * @return void
      * @throws Exception\SquareAlreadyFilledException
      */
@@ -139,95 +229,5 @@ class Solver
     private function isSquareFillable(int $row, int $col): bool
     {
         return !empty($this->getPossibleValuesForSquare($row, $col));
-    }
-
-    /**
-     * @return bool
-     */
-    public function canSolutionBeBuilt(): bool
-    {
-        return $this->areEmptySquaresFillable();
-    }
-
-    /**
-     * @param Sudoku $sudoku
-     * @return Sudoku|null
-     */
-    public function getSolutionFor(Sudoku $sudoku): ?Sudoku
-    {
-        $this->solution = clone $sudoku;
-
-        if (!$this->canSolutionBeBuilt()) {
-
-            return null;
-        }
-
-        return $this->buildSolution();
-    }
-
-    /**
-     * @return Sudoku
-     */
-    private function buildSolution(): Sudoku
-    {
-        while (!$this->solution->isSolved()) {
-            $this->fillASquare();
-        }
-
-        return $this->solution;
-    }
-
-    /**
-     * @param Sudoku $sudoku
-     * @return bool
-     */
-    private function areEmptySquaresFillable(): bool
-    {
-        foreach ($this->getEmptySquares() as $emptySquare) {
-            if (!$this->isSquareFillable(...$emptySquare)) {
-
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    /**
-     * @return array
-     */
-    public function buildPossibleValues(): array
-    {
-        return range(1, $this->solution->getRowCount());
-    }
-
-    /**
-     * @param int $row
-     * @return array
-     */
-    private function getValuesInRow(int $row): array
-    {
-        $values = [];
-
-        for($col = 0; $col < $this->solution->getRowCount(); $col++) {
-            $values[] = $this->solution->getValueForSquare($row, $col);
-        }
-
-        return $values;
-    }
-
-    /**
-     * @param int $col
-     * @return array
-     */
-    private function getValuesInColumn(int $col): array
-    {
-        $values = [];
-
-        for($row = 0; $row < $this->solution->getRowCount(); $row++) {
-            $values[] = $this->solution->getValueForSquare($row, $col);
-        }
-
-        return $values;
     }
 }
