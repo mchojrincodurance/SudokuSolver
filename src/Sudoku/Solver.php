@@ -6,60 +6,49 @@ namespace Sudoku;
 
 class Solver
 {
+    private Sudoku $solution;
+
     /**
-     * @param Sudoku $sudoku
      * @return void
      * @throws Exception\SquareAlreadyFilledException
      */
-    private function fillASquare(Sudoku $sudoku): void
+    private function fillASquare(): void
     {
-        $emptySquares = $this->getEmptySquares($sudoku);
+        $emptySquares = $this->getEmptySquares();
 
         foreach ($emptySquares as $emptySquare) {
-            if (count($possibleValues = $this->getPossibleValuesForSquare($sudoku, ...$emptySquare)) === 1) {
-                $sudoku->setValueForSquare($emptySquare['row'], $emptySquare['col'], current($possibleValues));
+            if (count($possibleValues = $this->getPossibleValuesForSquare(...$emptySquare)) === 1) {
+                $this->solution->setValueForSquare($emptySquare['row'], $emptySquare['col'], current($possibleValues));
 
                 return;
             }
         }
 
         $firstEmptySquare = current($emptySquares);
-        $sudoku->setValueForSquare(
+        $this->solution->setValueForSquare(
             $firstEmptySquare['row'],
             $firstEmptySquare['col'],
-            current($this->getPossibleValuesForSquare($sudoku, ...$firstEmptySquare))
+            current($this->getPossibleValuesForSquare(...$firstEmptySquare))
         );
     }
 
     /**
-     * @param Sudoku $sudoku
      * @param array $quadrant
      * @return array
      */
-    private function getValuesInQuadrant(Sudoku $sudoku, array $quadrant): array
+    private function getValuesInQuadrant(array $quadrant): array
     {
         $values = [];
 
         for ($i = $quadrant['upperLeft']['row']; $i <= $quadrant['bottomRight']['row']; $i++) {
             for ($j = $quadrant['upperLeft']['col']; $j <= $quadrant['bottomRight']['col']; $j++) {
-                if (!$sudoku->isEmptySquare($i, $j)) {
-                    $values[] = $sudoku->getValueForSquare($i, $j);
+                if (!$this->solution->isEmptySquare($i, $j)) {
+                    $values[] = $this->solution->getValueForSquare($i, $j);
                 }
             }
         }
 
         return $values;
-    }
-
-    /**
-     * @param Sudoku $sudoku
-     * @param int $col
-     * @param int $value
-     * @return bool
-     */
-    private function isValueRepeatedByColumn(Sudoku $sudoku, int $col, int $value): bool
-    {
-        return count(array_filter($this->getValuesInColumn($sudoku, $col), fn($element) => $value == $element)) > 1;
     }
 
     /**
@@ -79,47 +68,44 @@ class Solver
     }
 
     /**
-     * @param Sudoku $sudoku
      * @param int $row
      * @param int $col
      * @return array
      */
-    private function getForbiddenValuesByQuadrant(Sudoku $sudoku, int $row, int $col): array
+    private function getForbiddenValuesByQuadrant(int $row, int $col): array
     {
-        return $this->getValuesInQuadrant($sudoku, $sudoku->getQuadrantForSquare($row, $col));
+        return $this->getValuesInQuadrant($this->solution->getQuadrantForSquare($row, $col));
     }
 
     /**
-     * @param Sudoku $sudoku
      * @param int $col
      * @return array
      */
-    private function getForbiddenValuesByColumn(Sudoku $sudoku, int $col): array
+    private function getForbiddenValuesByColumn(int $col): array
     {
-        return array_filter($this->getValuesInColumn($sudoku, $col));
+        return array_filter($this->getValuesInColumn($col));
     }
 
     /**
-     * @param Sudoku $sudoku
      * @param int $row
      * @return array
      */
-    private function getForbiddenValuesByRow(Sudoku $sudoku, int $row): array
+    private function getForbiddenValuesByRow(int $row): array
     {
-        return array_filter($this->getValuesInRow($sudoku, $row));
+        return array_filter($this->getValuesInRow($row));
     }
 
     /**
      * @param Sudoku $sudoku
      * @return array
      */
-    private function getEmptySquares(Sudoku $sudoku): array
+    private function getEmptySquares(): array
     {
         $emptySquares = [];
 
-        for ($row = 0; $row < $sudoku->getRowCount(); $row++) {
-            for ($col = 0; $col < $sudoku->getRowCount(); $col++) {
-                if ($sudoku->isEmptySquare($row, $col)) {
+        for ($row = 0; $row < $this->solution->getRowCount(); $row++) {
+            for ($col = 0; $col < $this->solution->getRowCount(); $col++) {
+                if ($this->solution->isEmptySquare($row, $col)) {
                     $emptySquares[] = [
                         'row' => $row,
                         'col' => $col,
@@ -132,38 +118,35 @@ class Solver
     }
 
     /**
-     * @param Sudoku $sudoku
      * @param int $row
      * @param int $col
      * @return array
      */
-    private function getPossibleValuesForSquare(Sudoku $sudoku, int $row, int $col): array
+    private function getPossibleValuesForSquare(int $row, int $col): array
     {
-        $forbiddenValues = $this->getForbiddenValuesByRow($sudoku, $row);
-        $forbiddenValues = array_merge($forbiddenValues, $this->getForbiddenValuesByColumn($sudoku, $col));
-        $forbiddenValues = array_merge($forbiddenValues, $this->getForbiddenValuesByQuadrant($sudoku, $row, $col));
+        $forbiddenValues = $this->getForbiddenValuesByRow($row);
+        $forbiddenValues = array_merge($forbiddenValues, $this->getForbiddenValuesByColumn($col));
+        $forbiddenValues = array_merge($forbiddenValues, $this->getForbiddenValuesByQuadrant($row, $col));
 
-        return $this->removeForbiddenValues(array_unique($forbiddenValues), $this->buildPossibleValues($sudoku));
+        return $this->removeForbiddenValues(array_unique($forbiddenValues), $this->buildPossibleValues());
     }
 
     /**
-     * @param Sudoku $sudoku
      * @param int $row
      * @param int $col
      * @return bool
      */
-    private function isSquareFillable(Sudoku $sudoku, int $row, int $col): bool
+    private function isSquareFillable(int $row, int $col): bool
     {
-        return !empty($this->getPossibleValuesForSquare($sudoku, $row, $col));
+        return !empty($this->getPossibleValuesForSquare($row, $col));
     }
 
     /**
-     * @param Sudoku $sudoku
      * @return bool
      */
-    public function isSolvable(Sudoku $sudoku): bool
+    public function canSolutionBeBuilt(): bool
     {
-        return $this->emptySquaresAreFillable($sudoku);
+        return $this->areEmptySquaresFillable();
     }
 
     /**
@@ -172,37 +155,36 @@ class Solver
      */
     public function getSolutionFor(Sudoku $sudoku): ?Sudoku
     {
-        if (!$this->isSolvable($sudoku)) {
+        $this->solution = clone $sudoku;
+
+        if (!$this->canSolutionBeBuilt()) {
 
             return null;
         }
 
-        return $this->buildSolutionFor($sudoku);
+        return $this->buildSolution();
     }
 
     /**
-     * @param Sudoku $sudoku
      * @return Sudoku
      */
-    private function buildSolutionFor(Sudoku $sudoku): Sudoku
+    private function buildSolution(): Sudoku
     {
-        $sudoku1 = clone $sudoku;
-
-        while (!$sudoku1->isSolved()) {
-            $this->fillASquare($sudoku1);
+        while (!$this->solution->isSolved()) {
+            $this->fillASquare();
         }
 
-        return $sudoku1;
+        return $this->solution;
     }
 
     /**
      * @param Sudoku $sudoku
      * @return bool
      */
-    private function emptySquaresAreFillable(Sudoku $sudoku): bool
+    private function areEmptySquaresFillable(): bool
     {
-        foreach ($this->getEmptySquares($sudoku) as $emptySquare) {
-            if (!$this->isSquareFillable($sudoku, ...$emptySquare)) {
+        foreach ($this->getEmptySquares() as $emptySquare) {
+            if (!$this->isSquareFillable(...$emptySquare)) {
 
                 return false;
             }
@@ -212,41 +194,38 @@ class Solver
     }
 
     /**
-     * @param Sudoku $sudoku
      * @return array
      */
-    public function buildPossibleValues(Sudoku $sudoku): array
+    public function buildPossibleValues(): array
     {
-        return range(1, $sudoku->getRowCount());
+        return range(1, $this->solution->getRowCount());
     }
 
     /**
-     * @param Sudoku $sudoku
      * @param int $row
      * @return array
      */
-    private function getValuesInRow(Sudoku $sudoku, int $row): array
+    private function getValuesInRow(int $row): array
     {
         $values = [];
 
-        for($col = 0; $col < $sudoku->getRowCount(); $col++) {
-            $values[] = $sudoku->getValueForSquare($row, $col);
+        for($col = 0; $col < $this->solution->getRowCount(); $col++) {
+            $values[] = $this->solution->getValueForSquare($row, $col);
         }
 
         return $values;
     }
 
     /**
-     * @param Sudoku $sudoku
      * @param int $col
      * @return array
      */
-    private function getValuesInColumn(Sudoku $sudoku, int $col): array
+    private function getValuesInColumn(int $col): array
     {
         $values = [];
 
-        for($row = 0; $row < $sudoku->getRowCount(); $row++) {
-            $values[] = $sudoku->getValueForSquare($row, $col);
+        for($row = 0; $row < $this->solution->getRowCount(); $row++) {
+            $values[] = $this->solution->getValueForSquare($row, $col);
         }
 
         return $values;
