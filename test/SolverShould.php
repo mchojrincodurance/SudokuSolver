@@ -30,18 +30,7 @@ class SolverShould extends TestCase
 
         $this->assertTrue($this->sudokuEqualsMatrix($sudoku, $matrix));
     }
-    /**
-     * @test
-     */
 
-    public function detect_whether_a_sudoku_is_solvable_or_not()
-    {
-        $solvableSudoku = new Sudoku($this->buildSolvableSudokuMatrix());
-        $unsolvableSudoku = new Sudoku($this->buildUnsolvableSudokuMatrix());
-
-        $this->assertTrue($this->solver->isSolvable($solvableSudoku));
-        $this->assertFalse($this->solver->isSolvable($unsolvableSudoku));
-    }
     /**
      * @test
      */
